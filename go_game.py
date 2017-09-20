@@ -54,7 +54,7 @@ class GoGame:
         group_list = sorted( group_list, key = lambda group : group[ 'liberties' ] )
         for group in group_list:
             print( '-------------------------' )
-            print( 'Group: ' + ', '.join( [ '(%d,%d)' % ( location[0], location[1] ) for location in group[ 'location_list' ] ] ) )
+            print( 'Group: ' + ','.join( [ '(%d,%d)' % ( location[0], location[1] ) for location in group[ 'location_list' ] ] ) )
             print( 'Liberties: %d' % group[ 'liberties' ] )
     
     def PrintAnalysis( self ):
