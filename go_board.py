@@ -16,6 +16,12 @@ class GoBoard:
                     return False
         return True
     
+    def AllLocationsOfState( self, state = None ):
+        for i in range( self.size ):
+            for j in range( self.size ):
+                if not state or self.matrix[i][j] == state:
+                    yield ( i, j )
+    
     def AdjacentLocations( self, location ):
         for offset in [ ( -1, 0 ), ( 1, 0 ), ( 0, -1 ), ( 0, 1 ) ]:
             adjacent_location = ( location[0] + offset[0], location[1] + offset[1] )
@@ -31,12 +37,8 @@ class GoBoard:
     def SetState( self, location, state ):
         self.matrix[ location[0] ][ location[1] ] = state
     
-    def Analyze( self, for_who ):
-        location_list = []
-        for i in range( self.size ):
-            for j in range( self.size ):
-                if self.GetState( ( i, j ) ) == for_who:
-                    location_list.append( ( i, j ) )
+    def AnalyzeGroups( self, for_who ):
+        location_list = [ location for location in self.AllLocationsOfState( for_who ) ]
         group_list = []
         while len( location_list ) > 0:
             location = location_list[0]
@@ -57,6 +59,39 @@ class GoBoard:
                         group[ 'liberties' ] += 1
             group_list.append( group )
         return group_list
+    
+    def CalculateTerritory( self ):
+        territory = {
+            self.WHITE : 0,
+            self.BLACK : 0,
+        }
+        group_list = self.AnalyzeGroups( self.EMPTY )
+        for group in group_list:
+            location_list = group[ 'location_list' ]
+            touch_map = {
+                self.WHITE : set(),
+                self.BLACK : set(),
+            }
+            for location in location_list:
+                for adjacent_location in self.AdjacentLocation( location ):
+                    state = self.GetState( adjacent_location )
+                    if state != self.EMPTY:
+                        touch_map[ state ].add( adjacent_location )
+            white_touch_count = len( touch_map[ self.WHITE ] )
+            black_touch_count = len( touch_map[ self.BLACK ] )
+            group[ 'owner' ] = None
+            if white_touch_count > 0 and black_touch_count == 0:
+                group[ 'owner' ] = self.WHITE
+            elif black_touch_count > 0 and black_touch_count == 0:
+                group[ 'owner' ] = self.BLACK
+            else:
+                pass
+                # Here we may be able to claim that neither owns the territory,
+                # because we must capture all "dead stones" before making our calculation.
+            owner = group[ 'owner' ]
+            if owner:
+                territory[ owner ] += len( location_list )
+        return territory, group_list
     
     def Clone( self ):
         clone = GoBoard( self.size )

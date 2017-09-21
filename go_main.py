@@ -26,12 +26,14 @@ if __name__ == '__main__':
                 whose_turn = 'BLACK'
                 
             command = input( whose_turn + ': ' )
-            if command == 'exit':
+            if command == 'resign':
                 break
             elif command == 'pass':
                 go_game.PlaceStone( -1, -1 )
             elif command == 'analyze':
-                go_game.PrintAnalysis()
+                go_game.PrintGroupAnalysis()
+            elif command == 'score':
+                go_game.PrintScoreCalculation()
             else:
                 match = re.match( r'\(([0-9]+),([0-9]+)\)', command )
                 if match:
@@ -43,3 +45,5 @@ if __name__ == '__main__':
                     
         except Exception as ex:
             print( 'Exception: ' + str(ex) )
+    
+    go_game.PrintScoreCalculation()

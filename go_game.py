@@ -13,9 +13,12 @@ class GoGame:
     def CurrentBoard( self ):
         return self.history[ len( self.history ) - 1 ]
     
+    def OpponentOf( self, for_who ):
+        return GoBoard.WHITE if for_who == GoBoard.BLACK else GoBoard.BLACK
+    
     def PlaceStone( self, i, j ):
         
-        opponent = GoBoard.WHITE if self.whose_turn == GoBoard.BLACK else GoBoard.BLACK
+        opponent = self.OpponentOf( self.whose_turn )
         
         # If the given coordinates are out of range, then we consider it a pass.
         if i >= 0 and i < self.size and j >= 0 and j < self.size:
@@ -25,20 +28,21 @@ class GoGame:
             
             board = board.Clone()
             board.matrix[i][j] = self.whose_turn
-            if len( self.history ) >= 2 and self.history[ len( self.history ) - 2 ] == board:
-                raise Exception( 'Cannot repeat board state so soon.' )
             
-            group_list = board.Analyze( opponent )
+            group_list = board.AnalyzeGroups( opponent )
             for group in group_list:
                 if group[ 'liberties' ] == 0:
                     for location in group[ 'location_list' ]:
                         board.SetState( location, GoBoard.EMPTY )
                         self.captures[ self.whose_turn ] += 1
                         
-            group_list = board.Analyze( self.whose_turn )
+            group_list = board.AnalyzeGroups( self.whose_turn )
             for group in group_list:
                 if group[ 'liberties' ] == 0:
                     raise Exception( 'Cannot commit suicide.' )
+            
+            if len( self.history ) >= 2 and self.history[ len( self.history ) - 2 ] == board:
+                raise Exception( 'Cannot repeat board state so soon.' )
             
             self.history.append( board )
             self.consecutive_pass_count = 0
@@ -46,6 +50,22 @@ class GoGame:
             self.consecutive_pass_count += 1
         
         self.whose_turn = opponent
+    
+    def CalculateScores( self ):
+        board = self.CurrentBoard()
+        self.history.append( board.Clone() )
+        try:
+            # TODO: Cull dead stones and count them as captures for our calculation.
+            #       Make sure to restore captures before returning.  What defines a dead stone?
+            #       I think it might have to be an agreed-upon thing unless they play things out.
+            territory, group_list = self.CurrentBoard().CalculateTerritory()
+            scores = {
+                self.WHITE : territory[ self.WHITE ] - self.captures[ self.BLACK ],
+                self.BLACK : territory[ self.BLACK ] - self.captures[ self.WHITE ],
+            }
+        finally:
+            self.history.pop()
+        return scores
     
     def Print( self ):
         print( str( self.CurrentBoard() ) )
@@ -57,10 +77,10 @@ class GoGame:
             print( 'Group: ' + ','.join( [ '(%d,%d)' % ( location[0], location[1] ) for location in group[ 'location_list' ] ] ) )
             print( 'Liberties: %d' % group[ 'liberties' ] )
     
-    def PrintAnalysis( self ):
+    def PrintGroupAnalysis( self ):
         board = self.CurrentBoard()
-        white_group_list = board.Analyze( GoBoard.WHITE )
-        black_group_list = board.Analyze( GoBoard.BLACK )
+        white_group_list = board.AnalyzeGroups( GoBoard.WHITE )
+        black_group_list = board.AnalyzeGroups( GoBoard.BLACK )
         print( 'ANALYSIS OF BOARD' )
         print( '==================================' )
         print( 'For white:' )
@@ -69,3 +89,8 @@ class GoGame:
         print( 'For black:' )
         self.PrintGroupListData( black_group_list )
         print( '' )
+    
+    def PrintScoreCalculation( self ):
+        scores = self.CalculateScores()
+        print( 'White score: %d' % scores[ self.WHITE ] )
+        print( 'Black score: %d' % scores[ self.BLACK ] )
