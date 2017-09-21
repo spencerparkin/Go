@@ -60,8 +60,8 @@ class GoGame:
             #       I think it might have to be an agreed-upon thing unless they play things out.
             territory, group_list = self.CurrentBoard().CalculateTerritory()
             scores = {
-                self.WHITE : territory[ self.WHITE ] - self.captures[ self.BLACK ],
-                self.BLACK : territory[ self.BLACK ] - self.captures[ self.WHITE ],
+                GoBoard.WHITE : territory[ GoBoard.WHITE ] - self.captures[ GoBoard.BLACK ],
+                GoBoard.BLACK : territory[ GoBoard.BLACK ] - self.captures[ GoBoard.WHITE ],
             }
         finally:
             self.history.pop()
@@ -92,5 +92,5 @@ class GoGame:
     
     def PrintScoreCalculation( self ):
         scores = self.CalculateScores()
-        print( 'White score: %d' % scores[ self.WHITE ] )
-        print( 'Black score: %d' % scores[ self.BLACK ] )
+        print( 'White score: %d' % scores[ GoBoard.WHITE ] )
+        print( 'Black score: %d' % scores[ GoBoard.BLACK ] )

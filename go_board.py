@@ -16,10 +16,10 @@ class GoBoard:
                     return False
         return True
     
-    def AllLocationsOfState( self, state = None ):
+    def AllLocationsOfState( self, state ):
         for i in range( self.size ):
             for j in range( self.size ):
-                if not state or self.matrix[i][j] == state:
+                if self.matrix[i][j] == state:
                     yield ( i, j )
     
     def AdjacentLocations( self, location ):
@@ -51,12 +51,17 @@ class GoBoard:
                 for adjacent_location in self.AdjacentLocations( location ):
                     if adjacent_location in group[ 'location_list' ]:
                         continue
+                    if adjacent_location in queue:
+                        continue
                     if self.GetState( adjacent_location ) == for_who:
                         queue.append( adjacent_location )
-            for location in group[ 'location_list' ]:
-                for adjacent_location in self.AdjacentLocations( location ):
-                    if self.GetState( adjacent_location ) == self.EMPTY:
-                        group[ 'liberties' ] += 1
+            if for_who != self.EMPTY:
+                for location in group[ 'location_list' ]:
+                    for adjacent_location in self.AdjacentLocations( location ):
+                        if self.GetState( adjacent_location ) == self.EMPTY:
+                            group[ 'liberties' ] += 1
+            else:
+                del group[ 'liberties' ]
             group_list.append( group )
         return group_list
     
@@ -73,7 +78,7 @@ class GoBoard:
                 self.BLACK : set(),
             }
             for location in location_list:
-                for adjacent_location in self.AdjacentLocation( location ):
+                for adjacent_location in self.AdjacentLocations( location ):
                     state = self.GetState( adjacent_location )
                     if state != self.EMPTY:
                         touch_map[ state ].add( adjacent_location )
@@ -82,7 +87,7 @@ class GoBoard:
             group[ 'owner' ] = None
             if white_touch_count > 0 and black_touch_count == 0:
                 group[ 'owner' ] = self.WHITE
-            elif black_touch_count > 0 and black_touch_count == 0:
+            elif black_touch_count > 0 and white_touch_count == 0:
                 group[ 'owner' ] = self.BLACK
             else:
                 pass
