@@ -46,6 +46,9 @@ class GoGame:
             
             self.history.append( board )
             self.consecutive_pass_count = 0
+            
+            if len( self.history ) > 10:
+                self.history.pop(0)
         else:
             self.consecutive_pass_count += 1
         
@@ -94,3 +97,20 @@ class GoGame:
         scores = self.CalculateScores()
         print( 'White score: %d' % scores[ GoBoard.WHITE ] )
         print( 'Black score: %d' % scores[ GoBoard.BLACK ] )
+    
+    def Serialize( self ):
+        data = {
+            'size' : self.size,
+            'history' : self.history,
+            'whose_turn' : self.whose_turn,
+            'consecutive_pass_count' : self.consecutive_pass_count,
+            'captures' : self.captures,
+        }
+        return data
+    
+    def Deserialize( self, data ):
+        self.size = data[ 'size' ]
+        self.history = data[ 'history' ]
+        self.whose_turn = data[ 'whose_turn' ]
+        self.consecutive_pass_count = data[ 'consecutive_pass_count' ]
+        self.captures = data[ 'captures' ]
