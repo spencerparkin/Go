@@ -1,0 +1,1 @@
+web: python go_app.py
