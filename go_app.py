@@ -15,19 +15,23 @@ class GoApp( object ):
             # Run "heroku config:get MONGO_URI" to acquire this URI.  Being in plain text here, anyone could find it and corrupt our database.
             database_uri = 'mongodb://heroku_fq88qpck:jrte31rm6nsn87qkennbt02vuk@ds147304.mlab.com:47304/heroku_fq88qpck'
             self.mongo_client = pymongo.MongoClient( database_uri )
-            self.go_database = self.mongo_client[ 'go_database' ]
+            self.go_database = self.mongo_client[ 'heroku_fq88qpck' ]
+            collection_names = self.go_database.collection_names()
+            if not 'game_collection' in collection_names:
+                self.go_database.create_collection( 'game_collection' )
             self.game_collection = self.go_database[ 'game_collection' ]
         except:
             self.mongo_client = None
     
     def MakeErrorPage( self, error ):
         return '''
-        <html>
+        <!DOCTYPE HTML>
+        <html lang="en-US">
             <head>
                 <title>Error!</title>
             </head>
             <body>
-                <center>Error: %s</center>
+                <center><b>Error:</b> %s</center>
             </body>
         </html>
         ''' % error
@@ -37,38 +41,42 @@ class GoApp( object ):
         if not self.mongo_client:
             return self.MakeErrorPage( 'Failed to connect to MongoDB back-end.' )
         key = {
-            '$or' : {
-                'white' : '',
-                'black' : '',
-            }
+            '$or' : [
+                { 'white' : '' },
+                { 'black' : '' }
+            ]
         }
         cursor = self.game_collection.find( key )
-        html_game_table = '<table>\n<tr><th>Game Name</th><th>White Player</th><th>Black Player</th></tr>\n'
-        for game_doc in cursor:
-            html_game_table += '<tr>\n'
-            html_game_table += '<td>%s</td>' % game_doc[ 'name' ]
-            if game_doc[ 'white' ]:
-                html_game_table += '<td>%s</td>' % game_doc[ 'white' ]
-            else:
-                html_game_table += '<input type="button" value="Join as White" onclick="OnJoinGameClicked( \'%s\', \'white\' )"></input>\n' % game_doc[ 'name' ]
-            if game_doc[ 'black' ]:
-                html_game_table += '<td>%s</td>' % game_doc[ 'black' ]
-            else:
-                html_game_table += '<input type="button" value="Join as Black" onclick="OnJoinGameClicked( \'%s\', \'black\' )"></input>\n' % game_doc[ 'name' ]
-        html_game_table += '</table>\n'
+        if cursor.count() == 0:
+            html_game_table = '<p>The game collection is empty.  Create a new game.</p>'
+        else:
+            html_game_table = '<p>Following is a list of joinable games, if any.</p>\n'
+            html_game_table += '<table>\n<tr><th>Game Name</th><th>White Player</th><th>Black Player</th></tr>\n'
+            for game_doc in cursor:
+                html_game_table += '<tr>\n'
+                html_game_table += '<td>%s</td>' % game_doc[ 'name' ]
+                if game_doc[ 'white' ]:
+                    html_game_table += '<td>%s</td>' % game_doc[ 'white' ]
+                else:
+                    html_game_table += '<input type="button" value="Join as White" onclick="OnJoinGameClicked( \'%s\', \'white\' )"></input>\n' % game_doc[ 'name' ]
+                if game_doc[ 'black' ]:
+                    html_game_table += '<td>%s</td>' % game_doc[ 'black' ]
+                else:
+                    html_game_table += '<input type="button" value="Join as Black" onclick="OnJoinGameClicked( \'%s\', \'black\' )"></input>\n' % game_doc[ 'name' ]
+                html_game_table += '</tr>\n'
+            html_game_table += '</table>\n'
         html_doc = '''
         <!DOCTYPE HTML>
         <html lang="en-US">
             <head>
                 <meta charset="UTF-8">
-                <title>The game of Go!'</title>
+                <title>The game of Go!</title>
                 <script src="https://code.jquery.com/jquery.js"></script>
                 <script src="go.js"></script>
             </head>
             <body>
-                <p>Following is a list of joinable games, if any.</p>
                 %s
-                <input type="button" value="New Game" onclick="OnNewGameClicked()"></input>\n'
+                <input type="button" value="New Game" onclick="OnNewGameClicked()"></input>
             </body>
         </html>
         ''' % html_game_table
@@ -170,8 +178,9 @@ if __name__ == '__main__':
     app_config = {
         'global' : {
             'server.socket_host' : '0.0.0.0',
-            'server.socket_port' : int( os.environ.get( 'PORT', 5000 ) ),
+            'server.socket_port' : int( os.environ.get( 'PORT', 5090 ) ),
         },
+        # TODO: Fix this.  The page can't load its script file: go.js.
         '/scripts' : {
             'tools.staticdir.root' : os.path.dirname( os.path.abspath( __file__ ) ),
             'tools.staticdir.on' : True,
