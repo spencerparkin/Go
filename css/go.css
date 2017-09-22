@@ -1,0 +1,17 @@
+.cell {
+	position:relative;
+}
+
+.back_img {
+	position:absolute;
+	top:0;
+	left:0;
+	z-index:0;
+}
+
+.fore_img {
+	position:absolute;
+	top:0;
+	left:0;
+	z-index:1;
+}
