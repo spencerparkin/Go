@@ -115,6 +115,9 @@ class GoApp( object ):
             return self.MakeErrorPage( 'Failed to find game: %s', name )
         go_game = GoGame()
         go_game.Deserialize( game_doc[ 'data' ] )
+        move = { 'row' : -1, 'col' : -1 }
+        if 'most_recent_move' in game_doc:
+            move = game_doc[ 'most_recent_move' ]
         board = go_game.CurrentBoard()
         html_board_table = '<table cellspacing="0" cellpadding="0">\n'
         for i in range( board.size ):
@@ -132,6 +135,8 @@ class GoApp( object ):
                         board_fore_image = 'black_stone.png'
                     html_board_table += '<img class="back_img" src="images/%s"/>\n' % board_back_image
                     html_board_table += '<img class="fore_img" src="images/%s"/>\n' % board_fore_image
+                    if move[ 'row' ] == i and move[ 'col' ] == j:
+                        html_board_table += '<img class="high_img" src="images/highlight.png"/>\n'
                 html_board_table += '</td>\n'
             html_board_table += '</tr>\n'
         html_board_table += '</table>\n'
@@ -221,7 +226,8 @@ class GoApp( object ):
         except Exception as ex:
             return { 'error' : str(ex) }
         data = go_game.Serialize()
-        result = self.game_collection.update_one( { 'name' : name }, { '$set' : { 'data' : data } } )
+        move = { 'row' : row, 'col' : col }
+        result = self.game_collection.update_one( { 'name' : name }, { '$set' : { 'data' : data, 'most_recent_move' : move } } )
         if result.modified_count != 1:
             return { 'error' : 'Failed to update game in database.' }
         return {}
