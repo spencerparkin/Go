@@ -141,7 +141,7 @@ class GoApp( object ):
                 board_back_image = self.DetermineBoardImage( i, j, board.size )
                 state = board.GetState( ( i, j ) )
                 if state == GoBoard.EMPTY:
-                    html_board_table += '<img src="images/%s"/ onclick="OnPlaceStoneClicked( \'%s\', \'%s\', %d, %d )">\n' % ( board_back_image, name, color, i, j )
+                    html_board_table += '<img src="images/%s" onclick="OnPlaceStoneClicked( \'%s\', \'%s\', %d, %d )">\n' % ( board_back_image, name, color, i, j )
                 else:
                     if state == GoBoard.WHITE:
                         board_fore_image = 'white_stone.png'
