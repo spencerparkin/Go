@@ -15,3 +15,13 @@
 	left: 0;
 	z-index: 1;
 }
+
+#white_column_info {
+    float: left;
+    width: 50%;
+}
+
+#black_column_info {
+    float: right;
+    width: 50%;
+}

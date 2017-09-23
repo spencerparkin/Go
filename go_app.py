@@ -120,7 +120,6 @@ class GoApp( object ):
         for i in range( board.size ):
             html_board_table += '<tr>'
             for j in range( board.size ):
-                # TODO: How do I get rid of the unwanted spacing between rows?  :(
                 html_board_table += '<td class="cell">\n'
                 board_back_image = self.DetermineBoardImage( i, j, board.size )
                 state = board.GetState( ( i, j ) )
@@ -138,6 +137,13 @@ class GoApp( object ):
         html_board_table += '</table>\n'
         whose_turn = 'white' if go_game.whose_turn == GoBoard.WHITE else 'black'
         html_message = '<p>It is %s\'s turn.  You are %s.</p>' % ( whose_turn, color )
+        html_white_info = self.GenerateInfoForColor( go_game, 'white' )
+        html_black_info = self.GenerateInfoForColor( go_game, 'black' )
+        scores = go_game.CalculateScores()
+        html_score_info = '<center><table border="2">\n'
+        html_score_info += '<tr><th>white</th><th>black</th></tr>\n'
+        html_score_info += '<tr><td>%d</td><td>%d</td></tr>\n' % ( scores[ GoBoard.WHITE ], scores[ GoBoard.BLACK ] )
+        html_score_info += '</table></center>\n'
         return '''
         <html lang="en-US">
             <head>
@@ -150,10 +156,32 @@ class GoApp( object ):
             <body>
                 <center>%s</center>
                 <center>%s</center>
+                <center>%s</center>
+                %s
+                %s
             </body>
         </html>
-        ''' % ( name, html_message, html_board_table )
+        ''' % ( name, html_message, html_score_info, html_board_table, html_white_info, html_black_info )
         # TODO: Also display some useful information about groups and liberties etc?  And current score?
+
+    def GenerateInfoForColor( self, go_game, color ):
+        color_id = GoBoard.WHITE if color == 'white' else GoBoard.BLACK
+        html_info = '<div id="%s_column_info">\n' % color
+        html_info += '<center><h2>%s info</h2></center>\n' % color
+        html_info += '<p><center>captures: %s</center></p>\n' % go_game.captures[ color_id ]
+        html_info += '<center><table border="2">\n'
+        html_info += '<tr><th>Group Size</th><th>Liberties</th></tr>\n'
+        board = go_game.CurrentBoard()
+        group_list = board.AnalyzeGroups( color_id )
+        group_list = sorted( group_list, key = lambda group : group[ 'liberties' ] )
+        for group in group_list:
+            html_info += '<tr>\n'
+            html_info += '<td>%d</td>\n' % len( group[ 'location_list' ] )
+            html_info += '<td>%s</td>\n' % group[ 'liberties' ]
+            html_info += '</tr>\n'
+        html_info += '</table></center>\n'
+        html_info += '</div>\n'
+        return html_info
 
     def DetermineBoardImage( self, i, j, size ):
         directions = []
