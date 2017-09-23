@@ -3,7 +3,7 @@
 from go_board import GoBoard
 
 class GoGame:
-    def __init__( self, size ):
+    def __init__( self, size = 0 ):
         self.size = size
         self.history = [ GoBoard( size ) ]
         self.whose_turn = GoBoard.WHITE
@@ -101,16 +101,22 @@ class GoGame:
     def Serialize( self ):
         data = {
             'size' : self.size,
-            'history' : self.history,
+            'history' : [ board.Serialize() for board in self.history ],
             'whose_turn' : self.whose_turn,
             'consecutive_pass_count' : self.consecutive_pass_count,
-            'captures' : self.captures,
+            'captures' : {
+                'white' : self.captures[ GoBoard.WHITE ],
+                'black' : self.captures[ GoBoard.BLACK ],
+            }
         }
         return data
     
     def Deserialize( self, data ):
         self.size = data[ 'size' ]
-        self.history = data[ 'history' ]
+        self.history = [ GoBoard().Deserialize( board ) for board in data[ 'history' ] ]
         self.whose_turn = data[ 'whose_turn' ]
         self.consecutive_pass_count = data[ 'consecutive_pass_count' ]
-        self.captures = data[ 'captures' ]
+        self.captures = {
+            GoBoard.WHITE : data[ 'captures' ][ 'white' ],
+            GoBoard.BLACK : data[ 'captures' ][ 'black' ],
+        }

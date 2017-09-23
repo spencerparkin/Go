@@ -58,11 +58,11 @@ class GoApp( object ):
                 if game_doc[ 'white' ]:
                     html_game_table += '<td>%s</td>' % game_doc[ 'white' ]
                 else:
-                    html_game_table += '<input type="button" value="Join as White" onclick="OnJoinGameClicked( \'%s\', \'white\' )"></input>\n' % game_doc[ 'name' ]
+                    html_game_table += '<td><input type="button" value="Join as White" onclick="OnJoinGameClicked( \'%s\', \'white\' )"></input></td>\n' % game_doc[ 'name' ]
                 if game_doc[ 'black' ]:
                     html_game_table += '<td>%s</td>' % game_doc[ 'black' ]
                 else:
-                    html_game_table += '<input type="button" value="Join as Black" onclick="OnJoinGameClicked( \'%s\', \'black\' )"></input>\n' % game_doc[ 'name' ]
+                    html_game_table += '<td><input type="button" value="Join as Black" onclick="OnJoinGameClicked( \'%s\', \'black\' )"></input></td>\n' % game_doc[ 'name' ]
                 html_game_table += '</tr>\n'
             html_game_table += '</table>\n'
         html_doc = '''
@@ -72,7 +72,7 @@ class GoApp( object ):
                 <meta charset="UTF-8">
                 <title>The game of Go!</title>
                 <script src="https://code.jquery.com/jquery.js"></script>
-                <script src="go.js"></script>
+                <script src="scripts/go.js"></script>
             </head>
             <body>
                 %s
@@ -129,7 +129,7 @@ class GoApp( object ):
         game_doc = self.game_collection.find_one( { 'name' : name } )
         if not game_doc:
             return self.MakeErrorPage( 'Failed to find game: %s', name )
-        go_game = GoGame( game_doc[ 'data' ][ 'size' ] )
+        go_game = GoGame()
         go_game.Deserialize( game_doc[ 'data' ] )
         # TODO: The idea here is to dynamically generate an HTML page that shows the board state.
         #       I'm thinking of just tiling a bunch of textures.  Can I overlay one texture on top
@@ -174,17 +174,29 @@ class GoApp( object ):
 
 if __name__ == '__main__':
     go_app = GoApp()
-    
+
+    root_dir = os.path.dirname( os.path.abspath( __file__ ) )
+    port = int( os.environ.get( 'PORT', 5090 ) )
+
     app_config = {
         'global' : {
             'server.socket_host' : '0.0.0.0',
-            'server.socket_port' : int( os.environ.get( 'PORT', 5090 ) ),
+            'server.socket_port' : port,
         },
-        # TODO: Fix this.  The page can't load its script file: go.js.
+        '/' : {
+            'tools.staticdir.root': root_dir,
+        },
         '/scripts' : {
-            'tools.staticdir.root' : os.path.dirname( os.path.abspath( __file__ ) ),
             'tools.staticdir.on' : True,
             'tools.staticdir.dir' : 'scripts',
+        },
+        '/images' : {
+            'tools.staticdir.on': True,
+            'tools.staticdir.dir': 'images',
+        },
+        '/css': {
+            'tools.staticdir.on': True,
+            'tools.staticdir.dir': 'css',
         }
     }
     

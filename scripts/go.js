@@ -30,6 +30,5 @@ var OnPlaceStoneClicked = function( name, color, row, col ) {
             window.location.replace( '/error_page?error=' + json_data.error );
         else
             window.location.reload();
-        } );
-    }
+    } );
 }

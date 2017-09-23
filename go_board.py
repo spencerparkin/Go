@@ -5,10 +5,22 @@ class GoBoard:
     WHITE = 1
     BLACK = 2
     
-    def __init__( self, size ):
+    def __init__( self, size = 0 ):
         self.size = size
-        self.matrix = [ [ self.EMPTY for j in range( size ) ] for i in range( size ) ]
-    
+        if size > 0:
+            self.matrix = [ [ self.EMPTY for j in range( size ) ] for i in range( size ) ]
+
+    def Serialize( self ):
+        return {
+            'size' : self.size,
+            'matrix' : self.matrix
+        }
+
+    def Deserialize( self, data ):
+        self.size = data[ 'size' ]
+        self.matrix = data[ 'matrix' ]
+        return self
+
     def __eq__( self, board ):
         for i in range( self.size ):
             for j in range( self.size ):
