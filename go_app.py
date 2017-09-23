@@ -169,6 +169,7 @@ class GoApp( object ):
             </body>
         </html>
         ''' % ( name, game_doc[ 'white' ], game_doc[ 'black' ], html_message, html_board_table )
+        # TODO: Also display some useful information about groups and liberties etc?  And current score?
 
     def DetermineBoardImage( self, i, j, size ):
         directions = []
