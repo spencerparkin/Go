@@ -141,6 +141,7 @@ class GoApp( object ):
         return '''
         <html lang="en-US">
             <head>
+                <meta http-equiv="refresh" content="5">
                 <title>Go Game: %s</title>
                 <link rel="stylesheet" href="css/go.css">
                 <script src="https://code.jquery.com/jquery.js"></script>
