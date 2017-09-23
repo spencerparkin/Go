@@ -121,7 +121,7 @@ class GoApp( object ):
             html_board_table += '<tr>'
             for j in range( board.size ):
                 # TODO: How do I get rid of the unwanted spacing between rows?  :(
-                html_board_table += '<td class="cell" padding="0" height="0" style="height:64px;" align="center">\n'
+                html_board_table += '<td class="cell">\n'
                 board_back_image = self.DetermineBoardImage( i, j, board.size )
                 state = board.GetState( ( i, j ) )
                 if state == GoBoard.EMPTY:
@@ -139,7 +139,6 @@ class GoApp( object ):
         whose_turn = 'white' if go_game.whose_turn == GoBoard.WHITE else 'black'
         html_message = '<p>It is %s\'s turn.  You are %s.</p>' % ( whose_turn, color )
         return '''
-        <!DOCTYPE HTML>
         <html lang="en-US">
             <head>
                 <title>Go Game: %s</title>
@@ -148,7 +147,7 @@ class GoApp( object ):
                 <script src="scripts/go.js"></script>
             </head>
             <body>
-                %s
+                <center>%s</center>
                 <center>%s</center>
             </body>
         </html>
