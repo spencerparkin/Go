@@ -40,29 +40,19 @@ class GoApp( object ):
     def default( self, **kwargs ):
         if not self.mongo_client:
             return self.MakeErrorPage( 'Failed to connect to MongoDB back-end.' )
-        key = {
-            '$or' : [
-                { 'white' : '' },
-                { 'black' : '' }
-            ]
-        }
-        cursor = self.game_collection.find( key )
+        cursor = self.game_collection.find( {} )
         if cursor.count() == 0:
             html_game_table = '<p>The game collection is empty.  Create a new game.</p>'
         else:
-            html_game_table = '<p>Following is a list of joinable games.</p>\n'
-            html_game_table += '<table>\n<tr><th>Game Name</th><th>White Player</th><th>Black Player</th></tr>\n'
+            html_game_table = '<p>Following is a list of current games.</p>\n'
+            html_game_table += '<table border="3">\n<tr><th>Game Name</th><th>Size</th></tr>\n'
             for game_doc in cursor:
                 html_game_table += '<tr>\n'
-                html_game_table += '<td>%s</td>' % game_doc[ 'name' ]
-                if game_doc[ 'white' ]:
-                    html_game_table += '<td>%s</td>' % game_doc[ 'white' ]
-                else:
-                    html_game_table += '<td><input type="button" value="Join as White" onclick="OnJoinGameClicked( \'%s\', \'white\' )"></input></td>\n' % game_doc[ 'name' ]
-                if game_doc[ 'black' ]:
-                    html_game_table += '<td>%s</td>' % game_doc[ 'black' ]
-                else:
-                    html_game_table += '<td><input type="button" value="Join as Black" onclick="OnJoinGameClicked( \'%s\', \'black\' )"></input></td>\n' % game_doc[ 'name' ]
+                html_game_table += '<td>%s</td>\n' % game_doc[ 'name' ]
+                html_game_table += '<td>%d x %d</td>\n' % ( game_doc[ 'data' ][ 'size' ], game_doc[ 'data' ][ 'size' ] )
+                html_game_table += '<td><a href="game?name=%s&color=white">Join as White</a></td>\n' % game_doc[ 'name' ]
+                html_game_table += '<td><a href="game?name=%s&color=black">Join as Black</a></td>\n' % game_doc[ 'name' ]
+                html_game_table += '<td><input type="button" value="Delete Game" onclick="OnDeleteGameClicked( \'%s\' )"></input></td>\n' % game_doc[ 'name' ]
                 html_game_table += '</tr>\n'
             html_game_table += '</table>\n'
         html_doc = '''
@@ -94,30 +84,24 @@ class GoApp( object ):
         game_doc = self.game_collection.find_one( { 'name' : name } )
         if game_doc:
             return { 'error' : 'A game by the name "%s" already exists.' % name }
-        size = kwargs[ 'size' ] if 'size' in kwargs else 7
+        size = int( kwargs[ 'size' ] ) if 'size' in kwargs else 7
         go_game = GoGame( size )
         data = go_game.Serialize()
         game_doc = {
             'name' : name,
-            'black' : '',
-            'white' : '',
             'data' : data,
         }
         result = self.game_collection.insert_one( game_doc )
         return {}
-    
+
     @cherrypy.expose
     @cherrypy.tools.json_out()
-    def join_game( self, **kwargs ):
+    def del_game( self, **kwargs ):
         name = kwargs[ 'name' ]
-        color = kwargs[ 'color' ]
-        player_name = kwargs[ 'player_name' ]
         game_doc = self.game_collection.find_one( { 'name' : name } )
         if not game_doc:
-            return { 'error' : 'A game by the name "%s" was not found.' % name }
-        if game_doc[ color ]:
-            return { 'error' : 'Someone (%s) has already joined as color %s.' % ( game_doc[ color ], color ) }
-        result = self.game_collection.update_one( { 'name' : name }, { '$set' : { color : player_name } } )
+            return { 'error' : 'Failed to find game by the name: ' + name }
+        result = self.game_collection.delete_one( { 'name' : name } )
         return {}
     
     # TODO: We will display whose turn it is here, but the user will have to refresh the page to
@@ -137,7 +121,7 @@ class GoApp( object ):
             html_board_table += '<tr>'
             for j in range( board.size ):
                 # TODO: How do I get rid of the unwanted spacing between rows?  :(
-                html_board_table += '<td class="cell" padding="0">\n'
+                html_board_table += '<td class="cell" padding="0" height="0" style="height:64px;" align="center">\n'
                 board_back_image = self.DetermineBoardImage( i, j, board.size )
                 state = board.GetState( ( i, j ) )
                 if state == GoBoard.EMPTY:
@@ -153,12 +137,12 @@ class GoApp( object ):
             html_board_table += '</tr>\n'
         html_board_table += '</table>\n'
         whose_turn = 'white' if go_game.whose_turn == GoBoard.WHITE else 'black'
-        html_message = '<p>It is %s\'s turn.</p>' % whose_turn
+        html_message = '<p>It is %s\'s turn.  You are %s.</p>' % ( whose_turn, color )
         return '''
         <!DOCTYPE HTML>
         <html lang="en-US">
             <head>
-                <title>Go Game: %s (%s vs. %s)</title>
+                <title>Go Game: %s</title>
                 <link rel="stylesheet" href="css/go.css">
                 <script src="https://code.jquery.com/jquery.js"></script>
                 <script src="scripts/go.js"></script>
@@ -168,7 +152,7 @@ class GoApp( object ):
                 <center>%s</center>
             </body>
         </html>
-        ''' % ( name, game_doc[ 'white' ], game_doc[ 'black' ], html_message, html_board_table )
+        ''' % ( name, html_message, html_board_table )
         # TODO: Also display some useful information about groups and liberties etc?  And current score?
 
     def DetermineBoardImage( self, i, j, size ):
