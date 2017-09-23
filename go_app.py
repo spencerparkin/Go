@@ -50,7 +50,7 @@ class GoApp( object ):
         if cursor.count() == 0:
             html_game_table = '<p>The game collection is empty.  Create a new game.</p>'
         else:
-            html_game_table = '<p>Following is a list of joinable games, if any.</p>\n'
+            html_game_table = '<p>Following is a list of joinable games.</p>\n'
             html_game_table += '<table>\n<tr><th>Game Name</th><th>White Player</th><th>Black Player</th></tr>\n'
             for game_doc in cursor:
                 html_game_table += '<tr>\n'
@@ -125,26 +125,63 @@ class GoApp( object ):
     @cherrypy.expose
     def game( self, **kwargs ):
         name = kwargs[ 'name' ]
-        color = kwargs[ 'color' ] # TODO: When making the "onclick" call, this specifies what stone color is being placed.
+        color = kwargs[ 'color' ]
         game_doc = self.game_collection.find_one( { 'name' : name } )
         if not game_doc:
             return self.MakeErrorPage( 'Failed to find game: %s', name )
         go_game = GoGame()
         go_game.Deserialize( game_doc[ 'data' ] )
-        # TODO: The idea here is to dynamically generate an HTML page that shows the board state.
-        #       I'm thinking of just tiling a bunch of textures.  Can I overlay one texture on top
-        #       of another, the one on top having some alpha?  Can CSS help with all this?
-        #       Can I also make sure that each tile has an "onclick" event associated with it that
-        #       will call a JS function with the appropriate tile coordinates?
+        board = go_game.CurrentBoard()
+        html_board_table = '<table cellspacing="0" cellpadding="0">\n'
+        for i in range( board.size ):
+            html_board_table += '<tr>'
+            for j in range( board.size ):
+                # TODO: How do I get rid of the unwanted spacing between rows?  :(
+                html_board_table += '<td class="cell" padding="0">\n'
+                board_back_image = self.DetermineBoardImage( i, j, board.size )
+                state = board.GetState( ( i, j ) )
+                if state == GoBoard.EMPTY:
+                    html_board_table += '<img src="images/%s"/ onclick="OnPlaceStoneClicked( \'%s\', \'%s\', %d, %d )">\n' % ( board_back_image, name, color, i, j )
+                else:
+                    if state == GoBoard.WHITE:
+                        board_fore_image = 'white_stone.png'
+                    elif state == GoBoard.BLACK:
+                        board_fore_image = 'black_stone.png'
+                    html_board_table += '<img class="back_img" src="images/%s"/>\n' % board_back_image
+                    html_board_table += '<img class="fore_img" src="images/%s"/>\n' % board_fore_image
+                html_board_table += '</td>\n'
+            html_board_table += '</tr>\n'
+        html_board_table += '</table>\n'
+        whose_turn = 'white' if go_game.whose_turn == GoBoard.WHITE else 'black'
+        html_message = '<p>It is %s\'s turn.</p>' % whose_turn
         return '''
         <!DOCTYPE HTML>
         <html lang="en-US">
             <head>
+                <title>Go Game: %s (%s vs. %s)</title>
+                <link rel="stylesheet" href="css/go.css">
+                <script src="https://code.jquery.com/jquery.js"></script>
+                <script src="scripts/go.js"></script>
             </head>
             <body>
+                %s
+                <center>%s</center>
             </body>
         </html>
-        '''
+        ''' % ( name, game_doc[ 'white' ], game_doc[ 'black' ], html_message, html_board_table )
+
+    def DetermineBoardImage( self, i, j, size ):
+        directions = []
+        if i > 0:
+            directions.append( 'n' )
+        if i < size - 1:
+            directions.append( 's' )
+        if j > 0:
+            directions.append( 'w' )
+        if j < size - 1:
+            directions.append( 'e' )
+        directions.sort()
+        return 'go_' + ''.join( directions ) + '.jpg'
     
     @cherrypy.expose
     @cherrypy.tools.json_out()
@@ -160,9 +197,9 @@ class GoApp( object ):
             color = GoBoard.BLACK
         else:
             return { 'error' : 'Bogus color given.' }
-        row = kwargs[ 'row' ]
-        col = kwargs[ 'col' ]
-        go_game = GoGame( game_doc[ 'data' ][ 'size' ] )
+        row = int( kwargs[ 'row' ] )
+        col = int( kwargs[ 'col' ] )
+        go_game = GoGame()
         go_game.Deserialize( game_doc[ 'data' ] )
         if go_game.whose_turn != color:
             return { 'error' : 'It is not yet your turn.' }
@@ -170,6 +207,10 @@ class GoApp( object ):
             go_game.PlaceStone( row, col )
         except Exception as ex:
             return { 'error' : str(ex) }
+        data = go_game.Serialize()
+        result = self.game_collection.update_one( { 'name' : name }, { '$set' : { 'data' : data } } )
+        if result.modified_count != 1:
+            return { 'error' : 'Failed to update game in database.' }
         return {}
 
 if __name__ == '__main__':
