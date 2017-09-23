@@ -149,10 +149,14 @@ class GoApp( object ):
         html_score_info += '<tr><th>white</th><th>black</th></tr>\n'
         html_score_info += '<tr><td>%d</td><td>%d</td></tr>\n' % ( scores[ GoBoard.WHITE ], scores[ GoBoard.BLACK ] )
         html_score_info += '</table></center>\n'
+        html_refresh = ''
+        color_id = GoBoard.WHITE if color == 'white' else GoBoard.BLACK
+        if go_game.whose_turn != color_id:
+            html_refresh = '<meta http-equiv="refresh" content="10">\n'
         return '''
         <html lang="en-US">
             <head>
-                <meta http-equiv="refresh" content="5">
+                %s
                 <title>Go Game: %s</title>
                 <link rel="stylesheet" href="css/go.css">
                 <script src="https://code.jquery.com/jquery.js"></script>
@@ -166,7 +170,7 @@ class GoApp( object ):
                 %s
             </body>
         </html>
-        ''' % ( name, html_message, html_score_info, html_board_table, html_white_info, html_black_info )
+        ''' % ( html_refresh, name, html_message, html_score_info, html_board_table, html_white_info, html_black_info )
         # TODO: Also display some useful information about groups and liberties etc?  And current score?
 
     def GenerateInfoForColor( self, go_game, color ):
