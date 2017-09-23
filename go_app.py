@@ -123,7 +123,7 @@ class GoApp( object ):
         for i in range( board.size ):
             html_board_table += '<tr>'
             for j in range( board.size ):
-                html_board_table += '<td class="cell">\n'
+                html_board_table += '<td class="cell" style="height: 64px; width: 64px;">\n'
                 board_back_image = self.DetermineBoardImage( i, j, board.size )
                 state = board.GetState( ( i, j ) )
                 if state == GoBoard.EMPTY:
@@ -163,11 +163,15 @@ class GoApp( object ):
                 <script src="scripts/go.js"></script>
             </head>
             <body>
-                <center>%s</center>
-                <center>%s</center>
-                <center>%s</center>
-                %s
-                %s
+                <div>
+                    <center>%s</center>
+                    <center>%s</center>
+                    <center>%s</center>
+                </div>
+                <div>
+                    %s
+                    %s
+                </div>
             </body>
         </html>
         ''' % ( html_refresh, name, html_message, html_score_info, html_board_table, html_white_info, html_black_info )
