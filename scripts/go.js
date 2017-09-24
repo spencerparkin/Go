@@ -23,7 +23,8 @@ var OnDeleteGameClicked = function( name ) {
 }
 
 var OnPlaceStoneClicked = function( name, color, row, col ) {
-    $.getJSON( 'place_stone', { 'name' : name, 'color' : color, 'row' : row, 'col' : col }, function( json_data ) {
+    respond = $( '#respond:checked' ).length > 0 ? true : false;
+    $.getJSON( 'place_stone', { 'name' : name, 'color' : color, 'row' : row, 'col' : col, 'respond' : respond }, function( json_data ) {
         if( json_data.error )
             window.location.assign( '/error_page?error=' + json_data.error );
         else

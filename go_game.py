@@ -1,5 +1,7 @@
 # go_game.py
 
+import random
+
 from go_board import GoBoard
 
 class GoGame:
@@ -69,7 +71,46 @@ class GoGame:
         finally:
             self.history.pop()
         return scores
-    
+
+    def CalculateReasonableMove( self ):
+        # This is a quite laughable proposition as only programs like Google's DeepMind AlphaGo
+        # have been able to master the game of Go.  I can't help, however, but try to offer some
+        # kind of support for the idea of the computer trying to take a good or somewhat reasonable turn.
+        whose_turn = self.whose_turn
+        consecutive_pass_count = self.consecutive_pass_count
+        opponent = self.OpponentOf( self.whose_turn )
+        baseline_scores = self.CalculateScores()
+        board = self.CurrentBoard()
+        move_list = []
+        for location in board.AllLocationsOfState( GoBoard.EMPTY ):
+            self.history.append( board.Clone() )
+            try:
+                self.PlaceStone( location[0], location[1] )
+                scores = self.CalculateScores()
+                gain = 0
+                gain -= scores[ opponent ] - baseline_scores[ opponent ]
+                gain += scores[ self.whose_turn ] - baseline_scores[ self.whose_turn ]
+                move_list.append( ( location, gain ) )
+            except:
+                pass
+            finally:
+                self.history.pop()
+                self.whose_turn = whose_turn
+                self.consecutive_pass_count = consecutive_pass_count
+        largest_gain = 0
+        for move in move_list:
+            if move[1] > largest_gain:
+                largest_gain = move[1]
+        best_move_list = []
+        for move in move_list:
+            if move[1] == largest_gain:
+                best_move_list.append( move )
+        if len( best_move_list ) > 0:
+            best_move = best_move_list[ random.randint( 0, len( best_move_list ) - 1 ) ][0]
+        else:
+            best_move = ( -1, -1 )
+        return best_move
+
     def Print( self ):
         print( str( self.CurrentBoard() ) )
     

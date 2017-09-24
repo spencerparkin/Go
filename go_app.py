@@ -164,8 +164,9 @@ class GoApp( object ):
             </head>
             <body>
                 <div>
-                    <center>%s</center>
-                    <center>%s</center>
+                    <p><center>%s</center></p>
+                    <p><center>%s</center></p>
+                    <!--<center><input type="checkbox" id="respond">Have computer respond.</input></center>-->
                     <center>%s</center>
                 </div>
                 <div>
@@ -233,8 +234,12 @@ class GoApp( object ):
             go_game.PlaceStone( row, col )
         except Exception as ex:
             return { 'error' : str(ex) }
-        data = go_game.Serialize()
         move = { 'row' : row, 'col' : col }
+        if 'respond' in kwargs and kwargs[ 'respond' ] == 'true':
+            move = go_game.CalculateReasonableMove()
+            go_game.PlaceStone( move[0], move[1] )
+            move = { 'row' : move[0], 'col' : move[1] }
+        data = go_game.Serialize()
         result = self.game_collection.update_one( { 'name' : name }, { '$set' : { 'data' : data, 'most_recent_move' : move } } )
         if result.modified_count != 1:
             return { 'error' : 'Failed to update game in database.' }
