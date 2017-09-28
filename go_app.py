@@ -143,7 +143,7 @@ class GoApp( object ):
                     html_board_table += '<img class="back_img" src="images/%s"/>\n' % board_back_image
                     html_board_table += '<img class="fore_img" src="images/%s" %s/>\n' % ( board_fore_image, hover_calls )
                     if move[ 'row' ] == i and move[ 'col' ] == j:
-                        html_board_table += '<img class="high_img" src="images/highlight.png"/>\n'
+                        html_board_table += '<img class="high_img" src="images/highlight.png" %s/>\n' % hover_calls
                 html_board_table += '</td>\n'
             html_board_table += '</tr>\n'
         html_board_table += '</table>\n'
