@@ -31,3 +31,18 @@ var OnPlaceStoneClicked = function( name, color, row, col ) {
             window.location.reload();
     } );
 }
+
+var OnMouseOverStone = function( id_list, visible ) {
+    length = id_list.length;
+    for( var i = 0; i < length; i++ ) {
+        id = id_list[i];
+        ele = document.getElementById( id );
+        if( ele != null ) {
+            if( visible ) {
+                ele.style.visibility = "visible";
+            } else {
+                ele.style.visibility = "hidden";
+            }
+        }
+    }
+}

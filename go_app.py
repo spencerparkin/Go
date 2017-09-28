@@ -104,7 +104,6 @@ class GoApp( object ):
         result = self.game_collection.delete_one( { 'name' : name } )
         return {}
 
-    # TODO: It would be nice if hovering over a group showed its liberties.
     @cherrypy.expose
     def game( self, **kwargs ):
         name = kwargs[ 'name' ]
@@ -114,10 +113,16 @@ class GoApp( object ):
             return self.MakeErrorPage( 'Failed to find game: %s', name )
         go_game = GoGame()
         go_game.Deserialize( game_doc[ 'data' ] )
+        whose_turn = 'white' if go_game.whose_turn == GoBoard.WHITE else 'black'
+        color_id = GoBoard.WHITE if color == 'white' else GoBoard.BLACK
         move = { 'row' : -1, 'col' : -1 }
         if 'most_recent_move' in game_doc:
             move = game_doc[ 'most_recent_move' ]
         board = go_game.CurrentBoard()
+        group_list = {
+            GoBoard.WHITE : board.AnalyzeGroups( GoBoard.WHITE ),
+            GoBoard.BLACK : board.AnalyzeGroups( GoBoard.BLACK )
+        }
         html_board_table = '<table cellspacing="0" cellpadding="0">\n'
         for i in range( board.size ):
             html_board_table += '<tr>'
@@ -127,19 +132,21 @@ class GoApp( object ):
                 state = board.GetState( ( i, j ) )
                 if state == GoBoard.EMPTY:
                     html_board_table += '<img src="images/%s" onclick="OnPlaceStoneClicked( \'%s\', \'%s\', %d, %d )">\n' % ( board_back_image, name, color, i, j )
+                    if any( [ board.GetState( adj_location ) != GoBoard.EMPTY for adj_location in board.AdjacentLocations( ( i, j ) ) ] ):
+                        html_board_table += '<img class="lib_img" id="liberty_%d_%d" src="images/liberty.png" style="visibility:hidden"/>\n' % ( i, j )
                 else:
                     if state == GoBoard.WHITE:
                         board_fore_image = 'white_stone.png'
                     elif state == GoBoard.BLACK:
                         board_fore_image = 'black_stone.png'
+                    hover_calls = self.FormulateLibertyHoverJSCalls( group_list[ state ], i, j )
                     html_board_table += '<img class="back_img" src="images/%s"/>\n' % board_back_image
-                    html_board_table += '<img class="fore_img" src="images/%s"/>\n' % board_fore_image
+                    html_board_table += '<img class="fore_img" src="images/%s" %s/>\n' % ( board_fore_image, hover_calls )
                     if move[ 'row' ] == i and move[ 'col' ] == j:
                         html_board_table += '<img class="high_img" src="images/highlight.png"/>\n'
                 html_board_table += '</td>\n'
             html_board_table += '</tr>\n'
         html_board_table += '</table>\n'
-        whose_turn = 'white' if go_game.whose_turn == GoBoard.WHITE else 'black'
         html_message = '<p>It is %s\'s turn.  You are %s.</p>' % ( whose_turn, color )
         html_white_info = self.GenerateInfoForColor( go_game, 'white' )
         html_black_info = self.GenerateInfoForColor( go_game, 'black' )
@@ -151,7 +158,6 @@ class GoApp( object ):
         html_score_info += '<tr><td>territory</td><td>%d</td><td>%d</td></tr>\n' % ( scores[ GoBoard.WHITE ][ 'territory' ], scores[ GoBoard.BLACK ][ 'territory' ] )
         html_score_info += '</table></center>\n'
         html_refresh = ''
-        color_id = GoBoard.WHITE if color == 'white' else GoBoard.BLACK
         if go_game.whose_turn != color_id:
             html_refresh = '<meta http-equiv="refresh" content="10">\n'
         html_pass_button = '<p><center><button type="button" onclick="OnPlaceStoneClicked( \'%s\', \'%s\', -1, -1 )">forfeit turn</button>' % ( name, color )
@@ -179,6 +185,14 @@ class GoApp( object ):
             </body>
         </html>
         ''' % ( html_refresh, name, html_message, html_score_info, html_board_table, html_pass_button, html_white_info, html_black_info )
+
+    def FormulateLibertyHoverJSCalls( self, group_list, i, j ):
+        for group in group_list:
+            if ( i, j ) in group[ 'location_list' ]:
+                id_list = '[' + ','.join( [ '\'liberty_%d_%d\'' % ( location[0], location[1] ) for location in group[ 'liberty_location_list' ] ] ) + ']'
+                js_calls = 'onmouseover="OnMouseOverStone( %s, true )" onmouseout="OnMouseOverStone( %s, false )"' % ( id_list, id_list )
+                return js_calls
+        return ''
 
     def GenerateInfoForColor( self, go_game, color ):
         color_id = GoBoard.WHITE if color == 'white' else GoBoard.BLACK

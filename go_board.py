@@ -54,7 +54,7 @@ class GoBoard:
         group_list = []
         while len( location_list ) > 0:
             location = location_list[0]
-            group = { 'location_list' : [], 'liberties' : 0 }
+            group = { 'location_list' : [], 'liberties' : 0, 'liberty_location_list' : [] }
             queue = [ location ]
             while len( queue ) > 0:
                 location = queue.pop()
@@ -71,9 +71,12 @@ class GoBoard:
                 for location in group[ 'location_list' ]:
                     for adjacent_location in self.AdjacentLocations( location ):
                         if self.GetState( adjacent_location ) == self.EMPTY:
-                            group[ 'liberties' ] += 1
+                            if not adjacent_location in group[ 'liberty_location_list' ]:
+                                group[ 'liberties' ] += 1
+                                group[ 'liberty_location_list' ].append( adjacent_location )
             else:
                 del group[ 'liberties' ]
+                del group[ 'liberty_location_list' ]
             group_list.append( group )
         return group_list
     
