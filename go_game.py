@@ -65,8 +65,16 @@ class GoGame:
             #       I think it might have to be an agreed-upon thing unless they play things out.
             territory, group_list = self.CurrentBoard().CalculateTerritory()
             scores = {
-                GoBoard.WHITE : territory[ GoBoard.WHITE ] - self.captures[ GoBoard.BLACK ],
-                GoBoard.BLACK : territory[ GoBoard.BLACK ] - self.captures[ GoBoard.WHITE ],
+                GoBoard.WHITE : {
+                    'score' : territory[ GoBoard.WHITE ] - self.captures[ GoBoard.BLACK ],
+                    'territory' : territory[ GoBoard.WHITE ],
+                    'captures' : self.captures[ GoBoard.WHITE ]
+                },
+                GoBoard.BLACK : {
+                    'score' : territory[ GoBoard.BLACK ] - self.captures[ GoBoard.WHITE ],
+                    'territory' : territory[ GoBoard.BLACK ],
+                    'captures' : self.captures[ GoBoard.BLACK ]
+                }
             }
         finally:
             self.history.pop()
@@ -75,41 +83,76 @@ class GoGame:
     def CalculateReasonableMove( self ):
         # This is a quite laughable proposition as only programs like Google's DeepMind AlphaGo
         # have been able to master the game of Go.  I can't help, however, but try to offer some
-        # kind of support for the idea of the computer trying to take a good or somewhat reasonable turn.
+        # kind of support for the idea of the computer trying to take a somewhat reasonable turn.
+        # What we do here is simply.  We simply try to evaluate every possible move to see which
+        # appears to be most immediately advantageous.  Of course, there is no thinking ahead here,
+        # so this can't be all that great.
         whose_turn = self.whose_turn
-        consecutive_pass_count = self.consecutive_pass_count
         opponent = self.OpponentOf( self.whose_turn )
-        baseline_scores = self.CalculateScores()
+        consecutive_pass_count = self.consecutive_pass_count
+        captures = {
+            whose_turn : self.captures[ whose_turn ],
+            opponent : self.captures[ opponent ]
+        }
         board = self.CurrentBoard()
-        move_list = []
+        current_territory = board.CalculateTerritory()[0]
+        current_group_list_stats = {
+            whose_turn : self.CalculateGroupListStats( board.AnalyzeGroups( whose_turn ) ),
+            opponent : self.CalculateGroupListStats( board.AnalyzeGroups( opponent ) ),
+        }
+        best_move = None
+        best_rank = 0
         for location in board.AllLocationsOfState( GoBoard.EMPTY ):
             self.history.append( board.Clone() )
             try:
                 self.PlaceStone( location[0], location[1] )
-                scores = self.CalculateScores()
-                gain = 0
-                gain -= scores[ opponent ] - baseline_scores[ opponent ]
-                gain += scores[ self.whose_turn ] - baseline_scores[ self.whose_turn ]
-                move_list.append( ( location, gain ) )
+                territory = self.CurrentBoard().CalculateTerritory()[0]
+                group_list_stats = {
+                    whose_turn : self.CalculateGroupListStats( self.CurrentBoard().AnalyzeGroups( whose_turn ) ),
+                    opponent : self.CalculateGroupListStats( self.CurrentBoard().AnalyzeGroups( opponent ) )
+                }
+                rank = 0
+                if territory[ whose_turn ] > current_territory[ whose_turn ]:
+                    rank += ( territory[ whose_turn ] - current_territory[ whose_turn ] ) * 10
+                if territory[ opponent ] < current_territory[ opponent ]:
+                    rank += ( current_territory[ opponent ] - territory[ opponent ] ) * 9
+                if self.captures[ whose_turn ] > captures[ whose_turn ]:
+                    rank += ( self.captures[ whose_turn ] - captures[ whose_turn ] ) * 8
+                if group_list_stats[ whose_turn ][ 'jeopardy_count ' ] < current_group_list_stats[ whose_turn ][ 'jeopardy_count' ]:
+                    rank += ( current_group_list_stats[ whose_turn ][ 'jeopardy_count' ] - group_list_stats[ whose_turn ][ 'jeopardy_count ' ] ) * 7
+                if group_list_stats[ whose_turn ][ 'largest_group' ] > current_group_list_stats[ whose_turn ][ 'largest_group' ]:
+                    rank += ( group_list_stats[ whose_turn ][ 'largest_group' ] - current_group_list_stats[ whose_turn ][ 'largest_group' ] ) * 6
+                if group_list_stats[ opponent ][ 'total_liberties' ] < current_group_list_stats[ opponent ][ 'total_liberties' ]:
+                    rank += ( current_group_list_stats[ opponent ][ 'total_liberties' ] - group_list_stats[ opponent ][ 'total_liberties' ] ) * 5
+                if rank > best_rank:
+                    best_rank = rank
+                    best_move = location
             except:
                 pass
             finally:
                 self.history.pop()
                 self.whose_turn = whose_turn
                 self.consecutive_pass_count = consecutive_pass_count
-        largest_gain = 0
-        for move in move_list:
-            if move[1] > largest_gain:
-                largest_gain = move[1]
-        best_move_list = []
-        for move in move_list:
-            if move[1] == largest_gain:
-                best_move_list.append( move )
-        if len( best_move_list ) > 0:
-            best_move = best_move_list[ random.randint( 0, len( best_move_list ) - 1 ) ][0]
-        else:
+                self.captures[ whose_turn ] = captures[ whose_turn ]
+                self.captures[ opponent ] = captures[ opponent ]
+        if not best_move:
             best_move = ( -1, -1 )
         return best_move
+
+    def CalculateGroupListStats( self, group_list ):
+        stats = {
+            'jeopardy_count' : 0,
+            'largest_group' : 0,
+            'smallest_group' : 9999,
+        }
+        for group in group_list:
+            if group[ 'liberties' ] == 1:
+                stats[ 'jeopardy_count' ] += 1
+            if len( group[ 'location_list' ] ) > stats[ 'largest_group' ]:
+                stats[ 'largest_group' ] = len( group[ 'location_list' ] )
+            if len( group[ 'location_list' ] ) < stats[ 'smallest_group' ]:
+                stats[ 'smallest_group' ] = len( group[ 'location_list' ] )
+        return stats
 
     def Print( self ):
         print( str( self.CurrentBoard() ) )
@@ -136,8 +179,8 @@ class GoGame:
     
     def PrintScoreCalculation( self ):
         scores = self.CalculateScores()
-        print( 'White score: %d' % scores[ GoBoard.WHITE ] )
-        print( 'Black score: %d' % scores[ GoBoard.BLACK ] )
+        print( 'White score: %d' % scores[ GoBoard.WHITE ][ 'score' ] )
+        print( 'Black score: %d' % scores[ GoBoard.BLACK ][ 'score' ] )
     
     def Serialize( self ):
         data = {

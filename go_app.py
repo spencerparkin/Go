@@ -103,9 +103,8 @@ class GoApp( object ):
             return { 'error' : 'Failed to find game by the name: ' + name }
         result = self.game_collection.delete_one( { 'name' : name } )
         return {}
-    
-    # TODO: We will display whose turn it is here, but the user will have to refresh the page to
-    #       find out when it becomes their turn again.  Is there a way to be notified and then auto-refresh?
+
+    # TODO: It would be nice if hovering over a group showed its liberties.
     @cherrypy.expose
     def game( self, **kwargs ):
         name = kwargs[ 'name' ]
@@ -146,13 +145,16 @@ class GoApp( object ):
         html_black_info = self.GenerateInfoForColor( go_game, 'black' )
         scores = go_game.CalculateScores()
         html_score_info = '<center><table border="2">\n'
-        html_score_info += '<tr><th>white</th><th>black</th></tr>\n'
-        html_score_info += '<tr><td>%d</td><td>%d</td></tr>\n' % ( scores[ GoBoard.WHITE ], scores[ GoBoard.BLACK ] )
+        html_score_info += '<tr><th></th><th>white</th><th>black</th></tr>\n'
+        html_score_info += '<tr><td>score</td><td>%d</td><td>%d</td></tr>\n' % ( scores[ GoBoard.WHITE ][ 'score' ], scores[ GoBoard.BLACK ][ 'score' ] )
+        html_score_info += '<tr><td>captures</td><td>%d</td><td>%d</td></tr>\n' % ( scores[ GoBoard.WHITE ][ 'captures' ], scores[ GoBoard.BLACK ][ 'captures' ] )
+        html_score_info += '<tr><td>territory</td><td>%d</td><td>%d</td></tr>\n' % ( scores[ GoBoard.WHITE ][ 'territory' ], scores[ GoBoard.BLACK ][ 'territory' ] )
         html_score_info += '</table></center>\n'
         html_refresh = ''
         color_id = GoBoard.WHITE if color == 'white' else GoBoard.BLACK
         if go_game.whose_turn != color_id:
             html_refresh = '<meta http-equiv="refresh" content="10">\n'
+        html_pass_button = '<p><center><button type="button" onclick="OnPlaceStoneClicked( \'%s\', \'%s\', -1, -1 )">forfeit turn</button>' % ( name, color )
         return '''
         <html lang="en-US">
             <head>
@@ -168,6 +170,7 @@ class GoApp( object ):
                     <p><center>%s</center></p>
                     <!--<center><input type="checkbox" id="respond">Have computer respond.</input></center>-->
                     <center>%s</center>
+                    %s
                 </div>
                 <div>
                     %s
@@ -175,14 +178,13 @@ class GoApp( object ):
                 </div>
             </body>
         </html>
-        ''' % ( html_refresh, name, html_message, html_score_info, html_board_table, html_white_info, html_black_info )
-        # TODO: Also display some useful information about groups and liberties etc?  And current score?
+        ''' % ( html_refresh, name, html_message, html_score_info, html_board_table, html_pass_button, html_white_info, html_black_info )
 
     def GenerateInfoForColor( self, go_game, color ):
         color_id = GoBoard.WHITE if color == 'white' else GoBoard.BLACK
         html_info = '<div id="%s_column_info">\n' % color
         html_info += '<center><h2>%s info</h2></center>\n' % color
-        html_info += '<p><center>captures: %s</center></p>\n' % go_game.captures[ color_id ]
+        #html_info += '<p><center>captures: %s</center></p>\n' % go_game.captures[ color_id ]
         html_info += '<center><table border="2">\n'
         html_info += '<tr><th>Group Size</th><th>Liberties</th></tr>\n'
         board = go_game.CurrentBoard()
