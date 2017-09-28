@@ -143,8 +143,9 @@ class GoApp( object ):
                     elif state == GoBoard.BLACK:
                         board_fore_image = 'black_stone.png'
                     hover_calls = self.FormulateLibertyHoverJSCalls( group_list[ state ], i, j )
+                    click_calls = 'onclick="OnGiveUpStoneClicked( \'%s\', \'%s\', %d, %d )"' % ( name, color, i, j ) if state == color_id else ''
                     html_board_table += '<img class="back_img" src="images/%s"/>\n' % board_back_image
-                    html_board_table += '<img class="fore_img" src="images/%s" %s/>\n' % ( board_fore_image, hover_calls )
+                    html_board_table += '<img class="fore_img" src="images/%s" %s %s/>\n' % ( board_fore_image, hover_calls, click_calls )
                     if move[ 'row' ] == i and move[ 'col' ] == j:
                         html_board_table += '<img class="high_img" src="images/highlight.png" %s/>\n' % hover_calls
                 html_board_table += '</td>\n'
@@ -180,6 +181,7 @@ class GoApp( object ):
                     <!--<center><input type="checkbox" id="respond">Have computer respond.</input></center>-->
                     <center>%s</center>
                     %s
+                    <p><center>Click an empty board intersection to place a stone.  Click on your own stone to give it up as a prisoner (at end of game.)</center></p>
                 </div>
                 <div>
                     %s
@@ -232,6 +234,14 @@ class GoApp( object ):
     @cherrypy.expose
     @cherrypy.tools.json_out()
     def place_stone( self, **kwargs ):
+        return self.take_turn( **kwargs )
+    
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
+    def relinquish_stone( self, **kwargs ):
+        return self.take_turn( **kwargs )
+        
+    def take_turn( self, **kwargs ):
         name = kwargs[ 'name' ]
         game_doc = self.game_collection.find_one( { 'name' : name } )
         if not game_doc:
@@ -249,17 +259,27 @@ class GoApp( object ):
         go_game.Deserialize( game_doc[ 'data' ] )
         if go_game.whose_turn != color:
             return { 'error' : 'It is not yet your turn.' }
-        try:
-            go_game.PlaceStone( row, col )
-        except Exception as ex:
-            return { 'error' : str(ex) }
-        move = { 'row' : row, 'col' : col }
-        if 'respond' in kwargs and kwargs[ 'respond' ] == 'true':
-            move = go_game.CalculateReasonableMove()
-            go_game.PlaceStone( move[0], move[1] )
-            move = { 'row' : move[0], 'col' : move[1] }
+        move = None
+        if row < 0 or col < 0 or go_game.CurrentBoard().GetState( ( row, col ) ) == GoBoard.EMPTY:
+            try:
+                go_game.PlaceStone( row, col )
+            except Exception as ex:
+                return { 'error' : str(ex) }
+            move = { 'row' : row, 'col' : col }
+            if 'respond' in kwargs and kwargs[ 'respond' ] == 'true':
+                move = go_game.CalculateReasonableMove()
+                go_game.PlaceStone( move[0], move[1] )
+                move = { 'row' : move[0], 'col' : move[1] }
+        elif go_game.Currentboard().GetState( ( row, col ) ) == color:
+            try:
+                go_game.RelinquishStone( row, col )
+            except Exception as ex:
+                return { 'error' : str(ex) }
         data = go_game.Serialize()
-        result = self.game_collection.update_one( { 'name' : name }, { '$set' : { 'data' : data, 'most_recent_move' : move } } )
+        update = { 'data' : data }
+        if move:
+            update[ 'most_recent_move' ] = move
+        result = self.game_collection.update_one( { 'name' : name }, { '$set' : update } )
         if result.modified_count != 1:
             return { 'error' : 'Failed to update game in database.' }
         return {}

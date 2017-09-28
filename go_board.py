@@ -105,9 +105,7 @@ class GoBoard:
             elif black_touch_count > 0 and white_touch_count == 0:
                 group[ 'owner' ] = self.BLACK
             else:
-                pass
-                # Here we may be able to claim that neither owns the territory,
-                # because we must capture all "dead stones" before making our calculation.
+                pass # No one owns the territory.
             owner = group[ 'owner' ]
             if owner:
                 territory[ owner ] += len( location_list )

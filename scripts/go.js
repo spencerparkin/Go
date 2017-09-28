@@ -32,6 +32,19 @@ var OnPlaceStoneClicked = function( name, color, row, col ) {
     } );
 }
 
+var OnGiveUpStoneClicked = function( name, color, row, col ) {
+    answer = confirm( 'Give up stone?' )
+    if( answer ) {
+        $.getJSON( 'relinquish_stone', { 'name' : name, 'color' : color, 'row' : row, 'col' : col }, function( json_data ) {
+            if( json_data.error ) {
+                window.location.assign( '/error_page?error=' + json_data.error );
+            } else {
+                window.location.reload();
+            }
+        } );
+    }
+}
+
 var OnMouseOverStone = function( id_list, visible ) {
     length = id_list.length;
     for( var i = 0; i < length; i++ ) {

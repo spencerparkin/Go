@@ -56,28 +56,36 @@ class GoGame:
         
         self.whose_turn = opponent
     
-    def CalculateScores( self ):
+    def RelinquishStone( self, i, j ):
+
+        opponent = self.OpponentOf( self.whose_turn )
+        
+        if i < 0 or i >= self.size or j < 0 or j >= self.size:
+            raise Exception( 'Board location bogus: (%d,%d).' % ( i, j ) )
+        
         board = self.CurrentBoard()
-        self.history.append( board.Clone() )
-        try:
-            # TODO: Cull dead stones and count them as captures for our calculation.
-            #       Make sure to restore captures before returning.  What defines a dead stone?
-            #       I think it might have to be an agreed-upon thing unless they play things out.
-            territory, group_list = self.CurrentBoard().CalculateTerritory()
-            scores = {
-                GoBoard.WHITE : {
-                    'score' : territory[ GoBoard.WHITE ] - self.captures[ GoBoard.BLACK ],
-                    'territory' : territory[ GoBoard.WHITE ],
-                    'captures' : self.captures[ GoBoard.WHITE ]
-                },
-                GoBoard.BLACK : {
-                    'score' : territory[ GoBoard.BLACK ] - self.captures[ GoBoard.WHITE ],
-                    'territory' : territory[ GoBoard.BLACK ],
-                    'captures' : self.captures[ GoBoard.BLACK ]
-                }
+        if board.GetState( ( i, j ) ) != self.whose_turn:
+            raise Exception( 'Can only relinquish your own stones.' )
+        
+        board.SetState( ( i, j ), GoBoard.EMPTY )
+        self.captures[ opponent ] += 1
+        
+        # Notice that we do not change whose turn it is.
+    
+    def CalculateScores( self ):
+        territory, group_list = self.CurrentBoard().CalculateTerritory()
+        scores = {
+            GoBoard.WHITE : {
+                'score' : territory[ GoBoard.WHITE ] + self.captures[ GoBoard.WHITE ],
+                'territory' : territory[ GoBoard.WHITE ],
+                'captures' : self.captures[ GoBoard.WHITE ]
+            },
+            GoBoard.BLACK : {
+                'score' : territory[ GoBoard.BLACK ] + self.captures[ GoBoard.BLACK ],
+                'territory' : territory[ GoBoard.BLACK ],
+                'captures' : self.captures[ GoBoard.BLACK ]
             }
-        finally:
-            self.history.pop()
+        }
         return scores
 
     def CalculateReasonableMove( self ):
