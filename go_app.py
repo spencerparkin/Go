@@ -67,6 +67,9 @@ class GoApp( object ):
             <body>
                 %s
                 <input type="button" value="New Game" onclick="OnNewGameClicked()"></input>
+                <p>
+                For information on how to play Go, click <a href="webroot/go_rules.html">here</a>.
+                </p>
             </body>
         </html>
         ''' % html_game_table
@@ -273,19 +276,23 @@ if __name__ == '__main__':
             'server.socket_port' : port,
         },
         '/' : {
-            'tools.staticdir.root': root_dir,
+            'tools.staticdir.root' : root_dir,
         },
         '/scripts' : {
             'tools.staticdir.on' : True,
             'tools.staticdir.dir' : 'scripts',
         },
         '/images' : {
-            'tools.staticdir.on': True,
-            'tools.staticdir.dir': 'images',
+            'tools.staticdir.on' : True,
+            'tools.staticdir.dir' : 'images',
         },
-        '/css': {
-            'tools.staticdir.on': True,
-            'tools.staticdir.dir': 'css',
+        '/css' : {
+            'tools.staticdir.on' : True,
+            'tools.staticdir.dir' : 'css',
+        },
+        '/webroot' : {
+            'tools.staticdir.on' : True,
+            'tools.staticdir.dir' : 'webroot'
         }
     }
     
