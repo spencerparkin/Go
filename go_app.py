@@ -63,12 +63,13 @@ class GoApp( object ):
                 <title>The game of Go!</title>
                 <script src="https://code.jquery.com/jquery.js"></script>
                 <script src="scripts/go.js"></script>
+                <link rel="stylesheet" href="css/go.css">
             </head>
             <body>
                 %s
-                <input type="button" value="New Game" onclick="OnNewGameClicked()"></input>
+                <p><input type="button" value="New Game" onclick="OnNewGameClicked()"></input></p>
                 <p>
-                For information on how to play Go, click <a href="webroot/go_rules.html">here</a>.
+                For information on how to play Go, click <a href="go_rules.html">here</a>.
                 </p>
             </body>
         </html>
@@ -270,7 +271,7 @@ class GoApp( object ):
                 move = go_game.CalculateReasonableMove()
                 go_game.PlaceStone( move[0], move[1] )
                 move = { 'row' : move[0], 'col' : move[1] }
-        elif go_game.Currentboard().GetState( ( row, col ) ) == color:
+        elif go_game.CurrentBoard().GetState( ( row, col ) ) == color:
             try:
                 go_game.RelinquishStone( row, col )
             except Exception as ex:
@@ -297,6 +298,8 @@ if __name__ == '__main__':
         },
         '/' : {
             'tools.staticdir.root' : root_dir,
+            'tools.staticdir.on' : True,
+            'tools.staticdir.dir' : '',
         },
         '/scripts' : {
             'tools.staticdir.on' : True,
@@ -310,10 +313,6 @@ if __name__ == '__main__':
             'tools.staticdir.on' : True,
             'tools.staticdir.dir' : 'css',
         },
-        '/webroot' : {
-            'tools.staticdir.on' : True,
-            'tools.staticdir.dir' : 'webroot'
-        }
     }
     
     cherrypy.quickstart( go_app, '/', config = app_config )

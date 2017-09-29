@@ -39,3 +39,15 @@
     float: right;
     width: 50%;
 }
+
+body {
+    background-image: url("../images/background.jpg");
+    background-size: 100% 100%;
+    color: white;
+    height: 600px;
+}
+
+table {
+    background-color: white;
+    color: black;
+}

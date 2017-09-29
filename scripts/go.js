@@ -34,7 +34,7 @@ var OnPlaceStoneClicked = function( name, color, row, col ) {
 
 var OnGiveUpStoneClicked = function( name, color, row, col ) {
     answer = confirm( 'Give up stone?' )
-    if( answer ) {
+    if( answer === true ) {
         $.getJSON( 'relinquish_stone', { 'name' : name, 'color' : color, 'row' : row, 'col' : col }, function( json_data ) {
             if( json_data.error ) {
                 window.location.assign( '/error_page?error=' + json_data.error );
