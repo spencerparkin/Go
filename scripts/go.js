@@ -59,3 +59,17 @@ var OnMouseOverStone = function( id_list, visible ) {
         }
     }
 }
+
+var OnPageLoad = (my_turn, color, name) => {
+    if(my_turn === false) {
+        setInterval(() => {
+            $.getJSON('my_turn_yet', {'name': name, 'color': color}, json_data => {
+                if(json_data.error) {
+                    window.location.assign('/error_page?error=' + json_data.error);
+                } else if(json_data.answer === 'yes') {
+                    window.location.reload();
+                }
+            });
+        }, 1000);
+    }
+}

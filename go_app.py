@@ -109,6 +109,19 @@ class GoApp( object ):
         return {}
 
     @cherrypy.expose
+    @cherrypy.tools.json_out()
+    def my_turn_yet(self, **kwargs):
+        name = kwargs['name']
+        color = kwargs['color']
+        game_doc = self.game_collection.find_one({'name': name})
+        if not game_doc:
+            return {'error': 'Failed to find game by the name: ' + name}
+        go_game = GoGame()
+        go_game.Deserialize(game_doc['data'])
+        whose_turn = 'white' if go_game.whose_turn == GoBoard.WHITE else 'black'
+        return {'answer': 'yes' if whose_turn == color else 'no', 'error': False}
+
+    @cherrypy.expose
     def game( self, **kwargs ):
         name = kwargs[ 'name' ]
         color = kwargs[ 'color' ]
@@ -162,20 +175,16 @@ class GoApp( object ):
         html_score_info += '<tr><td>captures</td><td>%d</td><td>%d</td></tr>\n' % ( scores[ GoBoard.WHITE ][ 'captures' ], scores[ GoBoard.BLACK ][ 'captures' ] )
         html_score_info += '<tr><td>territory</td><td>%d</td><td>%d</td></tr>\n' % ( scores[ GoBoard.WHITE ][ 'territory' ], scores[ GoBoard.BLACK ][ 'territory' ] )
         html_score_info += '</table></center>\n'
-        html_refresh = ''
-        if go_game.whose_turn != color_id:
-            html_refresh = '<meta http-equiv="refresh" content="10">\n'
         html_pass_button = '<p><center><button type="button" onclick="OnPlaceStoneClicked( \'%s\', \'%s\', -1, -1 )">forfeit turn</button>' % ( name, color )
         return '''
         <html lang="en-US">
             <head>
-                %s
                 <title>Go Game: %s</title>
                 <link rel="stylesheet" href="css/go.css">
                 <script src="https://code.jquery.com/jquery.js"></script>
                 <script src="scripts/go.js"></script>
             </head>
-            <body>
+            <body onload="OnPageLoaded(%s, '%s', '%s')">
                 <div>
                     <p><center>%s</center></p>
                     <p><center>%s</center></p>
@@ -190,7 +199,7 @@ class GoApp( object ):
                 </div>
             </body>
         </html>
-        ''' % ( html_refresh, name, html_message, html_score_info, html_board_table, html_pass_button, html_white_info, html_black_info )
+        ''' % ( name, ('true' if whose_turn != color else 'false'), color, name, html_message, html_score_info, html_board_table, html_pass_button, html_white_info, html_black_info )
 
     def FormulateLibertyHoverJSCalls( self, group_list, i, j ):
         for group in group_list:

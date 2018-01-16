@@ -92,7 +92,7 @@ class GoGame:
         # This is a quite laughable proposition as only programs like Google's DeepMind AlphaGo
         # have been able to master the game of Go.  I can't help, however, but try to offer some
         # kind of support for the idea of the computer trying to take a somewhat reasonable turn.
-        # What we do here is simply.  We simply try to evaluate every possible move to see which
+        # What we do here is simple.  We simply try to evaluate every possible move to see which
         # appears to be most immediately advantageous.  Of course, there is no thinking ahead here,
         # so this can't be all that great.
         whose_turn = self.whose_turn
