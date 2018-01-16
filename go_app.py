@@ -199,7 +199,7 @@ class GoApp( object ):
                 </div>
             </body>
         </html>
-        ''' % ( name, ('true' if whose_turn != color else 'false'), color, name, html_message, html_score_info, html_board_table, html_pass_button, html_white_info, html_black_info )
+        ''' % ( name, ('true' if whose_turn == color else 'false'), color, name, html_message, html_score_info, html_board_table, html_pass_button, html_white_info, html_black_info )
 
     def FormulateLibertyHoverJSCalls( self, group_list, i, j ):
         for group in group_list:
