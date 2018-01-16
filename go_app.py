@@ -184,7 +184,7 @@ class GoApp( object ):
                 <script src="https://code.jquery.com/jquery.js"></script>
                 <script src="scripts/go.js"></script>
             </head>
-            <body onload="OnPageLoaded(%s, '%s', '%s')">
+            <body onload="OnPageLoad(%s, '%s', '%s')">
                 <div>
                     <p><center>%s</center></p>
                     <p><center>%s</center></p>
