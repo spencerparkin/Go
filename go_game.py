@@ -56,38 +56,43 @@ class GoGame:
         
         self.whose_turn = opponent
     
-	# TODO: Add a method that moves all stones down and left than can be without
-	#       changing the game score, and that uses captured stones to fill territory.
-	
-    def CalculateScores( self ):
+    def RelinquishStone( self, i, j ):
+
+        opponent = self.OpponentOf( self.whose_turn )
+        
+        if i < 0 or i >= self.size or j < 0 or j >= self.size:
+            raise Exception( 'Board location bogus: (%d,%d).' % ( i, j ) )
+        
         board = self.CurrentBoard()
-        self.history.append( board.Clone() )
-        try:
-            # TODO: Cull dead stones and count them as captures for our calculation.
-            #       Make sure to restore captures before returning.  What defines a dead stone?
-            #       I think it might have to be an agreed-upon thing unless they play things out.
-            territory, group_list = self.CurrentBoard().CalculateTerritory()
-            scores = {
-                GoBoard.WHITE : {
-                    'score' : territory[ GoBoard.WHITE ] - self.captures[ GoBoard.BLACK ],
-                    'territory' : territory[ GoBoard.WHITE ],
-                    'captures' : self.captures[ GoBoard.WHITE ]
-                },
-                GoBoard.BLACK : {
-                    'score' : territory[ GoBoard.BLACK ] - self.captures[ GoBoard.WHITE ],
-                    'territory' : territory[ GoBoard.BLACK ],
-                    'captures' : self.captures[ GoBoard.BLACK ]
-                }
+        if board.GetState( ( i, j ) ) != self.whose_turn:
+            raise Exception( 'Can only relinquish your own stones.' )
+        
+        board.SetState( ( i, j ), GoBoard.EMPTY )
+        self.captures[ opponent ] += 1
+        
+        # Notice that we do not change whose turn it is.
+    
+    def CalculateScores( self ):
+        territory, group_list = self.CurrentBoard().CalculateTerritory()
+        scores = {
+            GoBoard.WHITE : {
+                'score' : territory[ GoBoard.WHITE ] + self.captures[ GoBoard.WHITE ],
+                'territory' : territory[ GoBoard.WHITE ],
+                'captures' : self.captures[ GoBoard.WHITE ]
+            },
+            GoBoard.BLACK : {
+                'score' : territory[ GoBoard.BLACK ] + self.captures[ GoBoard.BLACK ],
+                'territory' : territory[ GoBoard.BLACK ],
+                'captures' : self.captures[ GoBoard.BLACK ]
             }
-        finally:
-            self.history.pop()
+        }
         return scores
 
     def CalculateReasonableMove( self ):
         # This is a quite laughable proposition as only programs like Google's DeepMind AlphaGo
         # have been able to master the game of Go.  I can't help, however, but try to offer some
         # kind of support for the idea of the computer trying to take a somewhat reasonable turn.
-        # What we do here is simply.  We simply try to evaluate every possible move to see which
+        # What we do here is simple.  We simply try to evaluate every possible move to see which
         # appears to be most immediately advantageous.  Of course, there is no thinking ahead here,
         # so this can't be all that great.
         whose_turn = self.whose_turn

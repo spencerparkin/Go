@@ -63,10 +63,14 @@ class GoApp( object ):
                 <title>The game of Go!</title>
                 <script src="https://code.jquery.com/jquery.js"></script>
                 <script src="scripts/go.js"></script>
+                <link rel="stylesheet" href="css/go.css">
             </head>
             <body>
                 %s
-                <input type="button" value="New Game" onclick="OnNewGameClicked()"></input>
+                <p><input type="button" value="New Game" onclick="OnNewGameClicked()"></input></p>
+                <p>
+                For information on how to play Go, click <a href="go_rules.html">here</a>.
+                </p>
             </body>
         </html>
         ''' % html_game_table
@@ -105,6 +109,19 @@ class GoApp( object ):
         return {}
 
     @cherrypy.expose
+    @cherrypy.tools.json_out()
+    def my_turn_yet(self, **kwargs):
+        name = kwargs['name']
+        color = kwargs['color']
+        game_doc = self.game_collection.find_one({'name': name})
+        if not game_doc:
+            return {'error': 'Failed to find game by the name: ' + name}
+        go_game = GoGame()
+        go_game.Deserialize(game_doc['data'])
+        whose_turn = 'white' if go_game.whose_turn == GoBoard.WHITE else 'black'
+        return {'answer': 'yes' if whose_turn == color else 'no', 'error': False}
+
+    @cherrypy.expose
     def game( self, **kwargs ):
         name = kwargs[ 'name' ]
         color = kwargs[ 'color' ]
@@ -140,10 +157,11 @@ class GoApp( object ):
                     elif state == GoBoard.BLACK:
                         board_fore_image = 'black_stone.png'
                     hover_calls = self.FormulateLibertyHoverJSCalls( group_list[ state ], i, j )
+                    click_calls = 'onclick="OnGiveUpStoneClicked( \'%s\', \'%s\', %d, %d )"' % ( name, color, i, j ) if state == color_id else ''
                     html_board_table += '<img class="back_img" src="images/%s"/>\n' % board_back_image
-                    html_board_table += '<img class="fore_img" src="images/%s" %s/>\n' % ( board_fore_image, hover_calls )
+                    html_board_table += '<img class="fore_img" src="images/%s" %s %s/>\n' % ( board_fore_image, hover_calls, click_calls )
                     if move[ 'row' ] == i and move[ 'col' ] == j:
-                        html_board_table += '<img class="high_img" src="images/highlight.png"/>\n'
+                        html_board_table += '<img class="high_img" src="images/highlight.png" %s/>\n' % hover_calls
                 html_board_table += '</td>\n'
             html_board_table += '</tr>\n'
         html_board_table += '</table>\n'
@@ -157,26 +175,23 @@ class GoApp( object ):
         html_score_info += '<tr><td>captures</td><td>%d</td><td>%d</td></tr>\n' % ( scores[ GoBoard.WHITE ][ 'captures' ], scores[ GoBoard.BLACK ][ 'captures' ] )
         html_score_info += '<tr><td>territory</td><td>%d</td><td>%d</td></tr>\n' % ( scores[ GoBoard.WHITE ][ 'territory' ], scores[ GoBoard.BLACK ][ 'territory' ] )
         html_score_info += '</table></center>\n'
-        html_refresh = ''
-        if go_game.whose_turn != color_id:
-            html_refresh = '<meta http-equiv="refresh" content="10">\n'
         html_pass_button = '<p><center><button type="button" onclick="OnPlaceStoneClicked( \'%s\', \'%s\', -1, -1 )">forfeit turn</button>' % ( name, color )
         return '''
         <html lang="en-US">
             <head>
-                %s
                 <title>Go Game: %s</title>
                 <link rel="stylesheet" href="css/go.css">
                 <script src="https://code.jquery.com/jquery.js"></script>
                 <script src="scripts/go.js"></script>
             </head>
-            <body>
+            <body onload="OnPageLoad(%s, '%s', '%s')">
                 <div>
                     <p><center>%s</center></p>
                     <p><center>%s</center></p>
                     <!--<center><input type="checkbox" id="respond">Have computer respond.</input></center>-->
                     <center>%s</center>
                     %s
+                    <p><center>Click an empty board intersection to place a stone.  Click on your own stone to give it up as a prisoner (at end of game.)</center></p>
                 </div>
                 <div>
                     %s
@@ -184,7 +199,7 @@ class GoApp( object ):
                 </div>
             </body>
         </html>
-        ''' % ( html_refresh, name, html_message, html_score_info, html_board_table, html_pass_button, html_white_info, html_black_info )
+        ''' % ( name, ('true' if whose_turn == color else 'false'), color, name, html_message, html_score_info, html_board_table, html_pass_button, html_white_info, html_black_info )
 
     def FormulateLibertyHoverJSCalls( self, group_list, i, j ):
         for group in group_list:
@@ -229,6 +244,14 @@ class GoApp( object ):
     @cherrypy.expose
     @cherrypy.tools.json_out()
     def place_stone( self, **kwargs ):
+        return self.take_turn( **kwargs )
+    
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
+    def relinquish_stone( self, **kwargs ):
+        return self.take_turn( **kwargs )
+        
+    def take_turn( self, **kwargs ):
         name = kwargs[ 'name' ]
         game_doc = self.game_collection.find_one( { 'name' : name } )
         if not game_doc:
@@ -246,17 +269,27 @@ class GoApp( object ):
         go_game.Deserialize( game_doc[ 'data' ] )
         if go_game.whose_turn != color:
             return { 'error' : 'It is not yet your turn.' }
-        try:
-            go_game.PlaceStone( row, col )
-        except Exception as ex:
-            return { 'error' : str(ex) }
-        move = { 'row' : row, 'col' : col }
-        if 'respond' in kwargs and kwargs[ 'respond' ] == 'true':
-            move = go_game.CalculateReasonableMove()
-            go_game.PlaceStone( move[0], move[1] )
-            move = { 'row' : move[0], 'col' : move[1] }
+        move = None
+        if row < 0 or col < 0 or go_game.CurrentBoard().GetState( ( row, col ) ) == GoBoard.EMPTY:
+            try:
+                go_game.PlaceStone( row, col )
+            except Exception as ex:
+                return { 'error' : str(ex) }
+            move = { 'row' : row, 'col' : col }
+            if 'respond' in kwargs and kwargs[ 'respond' ] == 'true':
+                move = go_game.CalculateReasonableMove()
+                go_game.PlaceStone( move[0], move[1] )
+                move = { 'row' : move[0], 'col' : move[1] }
+        elif go_game.CurrentBoard().GetState( ( row, col ) ) == color:
+            try:
+                go_game.RelinquishStone( row, col )
+            except Exception as ex:
+                return { 'error' : str(ex) }
         data = go_game.Serialize()
-        result = self.game_collection.update_one( { 'name' : name }, { '$set' : { 'data' : data, 'most_recent_move' : move } } )
+        update = { 'data' : data }
+        if move:
+            update[ 'most_recent_move' ] = move
+        result = self.game_collection.update_one( { 'name' : name }, { '$set' : update } )
         if result.modified_count != 1:
             return { 'error' : 'Failed to update game in database.' }
         return {}
@@ -273,20 +306,22 @@ if __name__ == '__main__':
             'server.socket_port' : port,
         },
         '/' : {
-            'tools.staticdir.root': root_dir,
+            'tools.staticdir.root' : root_dir,
+            'tools.staticdir.on' : True,
+            'tools.staticdir.dir' : '',
         },
         '/scripts' : {
             'tools.staticdir.on' : True,
             'tools.staticdir.dir' : 'scripts',
         },
         '/images' : {
-            'tools.staticdir.on': True,
-            'tools.staticdir.dir': 'images',
+            'tools.staticdir.on' : True,
+            'tools.staticdir.dir' : 'images',
         },
-        '/css': {
-            'tools.staticdir.on': True,
-            'tools.staticdir.dir': 'css',
-        }
+        '/css' : {
+            'tools.staticdir.on' : True,
+            'tools.staticdir.dir' : 'css',
+        },
     }
     
     cherrypy.quickstart( go_app, '/', config = app_config )
