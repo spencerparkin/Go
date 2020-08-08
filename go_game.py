@@ -56,6 +56,9 @@ class GoGame:
         
         self.whose_turn = opponent
     
+	# TODO: Add a method that moves all stones down and left than can be without
+	#       changing the game score, and that uses captured stones to fill territory.
+	
     def CalculateScores( self ):
         board = self.CurrentBoard()
         self.history.append( board.Clone() )
